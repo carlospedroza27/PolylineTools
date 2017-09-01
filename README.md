@@ -4,3 +4,8 @@ Hello all, here I present to you my first App Inventor extension ever made for d
 So this is it! I hope you find this useful and you find how to make it better, please let me know so I can learn from it.
 
 This extension was made in colaboration with Diego Pedroza.
+
+Simple funcion: DecodePolyline with only one parameter:
+- *encodedPolyline* wich is the string that will be decoded.
+
+And it returns a list of paired lat/lng (*DecodePolyline*).
