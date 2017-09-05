@@ -13,7 +13,6 @@ import com.google.appinventor.components.common.ComponentConstants;
 import com.google.appinventor.components.common.PropertyTypeConstants;
 import com.google.appinventor.components.common.YaVersion;
 import com.google.appinventor.components.runtime.util.YailList;
-import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.List;
 import android.content.Context;
@@ -51,7 +50,8 @@ public class PolylineTools extends AndroidNonvisibleComponent implements Compone
 		Log.d(LOG_TAG, "PolylineTools created");
 	}
 
-/**Decodes an encoded polyline string reversing Encoded Polyline Algorithm
+/**Decodes an encoded polyline string reversing Encoded Polyline Algorithm.
+* Based on <a href="http://jeffreysambells.com/">Jeffrey Sambells' method</a>
 * @param	encodedPolyline is the string that will be decoded
 * @return	polylineDecoded	is a list of paired lat/lng
 */
@@ -70,8 +70,7 @@ public static List Decode (String encodedPolyline) {
 			result |= (b & 0x1f) << shift;
 			shift += 5;
 		} while (b >= 0x20);
-		int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-		lat += dlat;
+		lat += ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
 		shift = 0;
 		result = 0;
 		do {
@@ -79,8 +78,7 @@ public static List Decode (String encodedPolyline) {
 			result |= (b & 0x1f) << shift;
 			shift += 5;
 		} while (b >= 0x20);
-			int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-			lng += dlng;
+			lng += ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
 	ArrayList<Double> point = new ArrayList<Double>();
     point.add(((double) lat / 1E5));
     point.add(((double) lng / 1E5));
@@ -90,24 +88,63 @@ public static List Decode (String encodedPolyline) {
 }
 
 /**Encodes a number lat or lng into a string following the Encoding Polyline Algorithm Format
+* Based on <a href="http://statsciolist.blogspot.com/2013/05/java-google-maps-polyline-encoding.html">Sciolist's method</a>
 * @param	latORlng is the number that will be decoded
 * @return	EncodedPolyline	is a string with the number decoded
 */
 @SimpleFunction(description = "Encodes a number and return a string with the number encoded")
-public static String Encode (double latORlng) {
+public static String EncodeLatORLng (double latORlng) {
 	String EncodedPolyline = "";
-	int dpoint = ((int)(latORlng*1E5));
-    int Result = 0;
-	int Shift = 0;
-	Result = (dpoint <= 0 ? ~(dpoint << 1) : (dpoint << 1));
-	int[] Chars = {0,1,2,3,4,5};
-	for (int t: Chars) {
-		int variable = ((Result >> Shift) & 0x1f);
-		Chars[t] = variable;
-		Chars[t] = (t == 5 ? variable : (variable | 0x20)) + 63;
-		Shift += 5;
-		EncodedPolyline += (char)Chars[t];
-    }
-    return (EncodedPolyline); 
+	int b = (int) Math.round(latORlng*1E5);
+	ArrayList<Integer> ab = new ArrayList<Integer>();
+	if (b==0){
+			EncodedPolyline += "?";
+		} else {
+	b = (b>0 ? (b<<1) : ~(b<<1));
+	while(b>0){
+		ab.add(b % 32);
+		b=b>>5;
+		}
+		StringBuilder latlng = new StringBuilder();
+		for(int i=0;i<ab.size()-1;i++){
+			char c = (char) ((ab.get(i) | 0x20)+63);
+			latlng.append(c);
+		}
+		latlng.append((char) (ab.get(ab.size()-1)+63));
+		EncodedPolyline += latlng.toString();
+		}
+		return (EncodedPolyline);
+}
+
+/**Encodes a point (lat or lng ) into a string following the Encoding Polyline Algorithm Format
+* Based on <a href="http://statsciolist.blogspot.com/2013/05/java-google-maps-polyline-encoding.html">Sciolist's method</a>
+* @param	point is a YailList with the latitude and the longitude that will be decoded
+* @return	EncodedPolyline	is a string with the point decoded
+*/
+@SimpleFunction(description = "Encodes a paired lat/lng and return a string with the point encoded")
+public static String EncodePoint (YailList point) {
+	String[] pairedLatLng = point.toStringArray();
+	String EncodedPolyline = "";
+	for (String latORlng: pairedLatLng) {
+		int b = (int) Math.round(Double.parseDouble(latORlng)*1E5);
+		ArrayList<Integer> ab = new ArrayList<Integer>();
+		if (b==0){
+			EncodedPolyline += "?";
+		} else {
+		b = (b>0 ? (b<<1) : ~(b<<1));
+		while(b>0){
+			ab.add(b % 32);
+			b=b>>5;
+		}
+		StringBuilder latlng = new StringBuilder();
+		for(int i=0;i<ab.size()-1;i++){
+			char c = (char) ((ab.get(i) | 0x20)+63);
+			latlng.append(c);
+		}
+		latlng.append((char) (ab.get(ab.size()-1)+63));
+		EncodedPolyline += latlng.toString();
+		}
+	}
+	return (EncodedPolyline);
 }
 }
