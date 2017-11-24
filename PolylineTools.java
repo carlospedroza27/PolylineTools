@@ -4,11 +4,7 @@ import com.google.appinventor.components.annotations.*;
 import com.google.appinventor.components.common.ComponentCategory;
 import com.google.appinventor.components.runtime.*;
 import com.google.appinventor.components.runtime.collect.Sets;
-import com.google.appinventor.components.runtime.util.BoundingBox;
-import com.google.appinventor.components.runtime.util.ErrorMessages;
-import com.google.appinventor.components.runtime.util.FileUtil;
-import com.google.appinventor.components.runtime.util.MediaUtil;
-import com.google.appinventor.components.runtime.util.PaintUtil;
+import com.google.appinventor.components.runtime.util.*;
 import com.google.appinventor.components.common.ComponentConstants;
 import com.google.appinventor.components.common.PropertyTypeConstants;
 import com.google.appinventor.components.common.YaVersion;
@@ -55,7 +51,6 @@ public class PolylineTools extends AndroidNonvisibleComponent implements Compone
 * @param	encodedPolyline is the string that will be decoded
 * @return	polylineDecoded	is a list of paired lat/lng
 */
-
 @SimpleFunction(description = "Decodes polyline and returns a list of paired lat/lng")
 public static List Decode (String encodedPolyline) {
 	List<ArrayList<Double>> polylineDecoded = new ArrayList<ArrayList<Double>>();
@@ -87,12 +82,67 @@ public static List Decode (String encodedPolyline) {
     return(polylineDecoded);
 }
 
-/**Encodes a number lat or lng into a string following the Encoding Polyline Algorithm Format
+/**Encodes a list of paired lat/lng using the the Encoded Polyline Algorithm.
+* Based on <a href="http://statsciolist.blogspot.com/2013/05/java-google-maps-polyline-encoding.html">Sciolist's method</a>
+* @param	encodedPolyline is the string that will be decoded
+* @return	polylineDecoded	is a list of paired lat/lng
+*/
+@SimpleFunction(description = "Encodes a list of paired lat/lng and return a string with the point encoded")
+public String Encode (YailList decodedPolyline) {
+	String json = decodedPolyline.toJSONString();
+	try {
+		ArrayList<ArrayList<Double>> objects = (ArrayList<ArrayList<Double>>)decodeJsonText(json);
+		return EncodeEncode(objects);
+	} catch (IllegalArgumentException e) {
+		return "";
+	}
+}
+
+private String EncodeEncode (ArrayList<ArrayList<Double>> points) {
+	String EncodedPolyline = "";
+	double[] previousPoint = {0,0};
+	for (ArrayList<Double> point : points){
+		for (int k = 0; k < 2; k++) {
+			double encodingP = point.get(k) - previousPoint[k];
+			previousPoint[k] = point.get(k);
+			int b = (int) Math.round(encodingP*1E5);
+			ArrayList<Integer> ab = new ArrayList<Integer>();
+			if (b==0){
+				EncodedPolyline += "?";
+			} else {
+				b = (b>0 ? (b<<1) : ~(b<<1));
+				while(b>0){
+					ab.add(b % 32);
+					b=b>>5;
+				}
+				StringBuilder latlng = new StringBuilder();
+				for(int i=0;i<ab.size()-1;i++){
+					char c = (char) ((ab.get(i) | 0x20)+63);
+					latlng.append(c);
+				}
+				latlng.append((char) (ab.get(ab.size()-1)+63));
+				EncodedPolyline += latlng.toString();
+			}
+		}
+	}
+	return (EncodedPolyline);
+}
+
+private Object decodeJsonText(String jsonText) throws IllegalArgumentException {
+	try {
+		return JsonUtil.getObjectFromJson(jsonText);
+	} catch (JSONException e) {
+		throw new IllegalArgumentException("jsonText is not a legal JSON value");
+	}
+}
+	
+	
+/**Encodes a number lat or lng into a string following the Encoding Polyline Algorithm Format (Deprecated)
 * Based on <a href="http://statsciolist.blogspot.com/2013/05/java-google-maps-polyline-encoding.html">Sciolist's method</a>
 * @param	latORlng is the number that will be decoded
 * @return	EncodedPolyline	is a string with the number decoded
 */
-@SimpleFunction(description = "Encodes a number and return a string with the number encoded")
+@SimpleFunction(description = "Encodes a number and return a string with the number encoded. DEPRECATED: Use Encode method instead.")
 public static String EncodeLatORLng (double latORlng) {
 	String EncodedPolyline = "";
 	int b = (int) Math.round(latORlng*1E5);
@@ -121,7 +171,7 @@ public static String EncodeLatORLng (double latORlng) {
 * @param	point is a YailList with the latitude and the longitude that will be decoded
 * @return	EncodedPolyline	is a string with the point decoded
 */
-@SimpleFunction(description = "Encodes a paired lat/lng and return a string with the point encoded")
+@SimpleFunction(description = "Encodes a paired lat/lng and return a string with the point encoded. DEPRECATED: Use Encode method instead.")
 public static String EncodePoint (YailList point) {
 	String[] pairedLatLng = point.toStringArray();
 	String EncodedPolyline = "";
